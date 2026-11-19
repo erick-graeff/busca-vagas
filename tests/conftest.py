@@ -2,12 +2,29 @@ import json
 from pathlib import Path
 
 import pytest
+import requests
 
 from busca_vagas.adapters.outbound.sources.lever import LeverSource
 from busca_vagas.config.loader import load_config, to_profile, to_rules
 from busca_vagas.domain.models import Posting
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture(autouse=True)
+def isolate_from_outside(monkeypatch):
+    """Testes nunca falam com o mundo real: sem credenciais do ambiente e sem rede.
+
+    Sem isso, um teste de erro de config montava o Telegram com as variáveis do shell do
+    desenvolvedor e mandava mensagem de verdade.
+    """
+    for var in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "BUSCA_VAGAS_CONFIG"):
+        monkeypatch.delenv(var, raising=False)
+
+    def no_network(self, method, url, *args, **kwargs):
+        raise RuntimeError(f"teste tentou acessar a rede: {method} {url.split('/bot')[0]}")
+
+    monkeypatch.setattr(requests.Session, "request", no_network)
 
 
 @pytest.fixture(scope="session")
