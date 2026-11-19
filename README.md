@@ -181,3 +181,7 @@ uv run pytest
 
 Os testes de `application/` usam fakes das portas, sem rede e sem IA. Os de `domain/` incluem
 uma caracterização com 107 vagas reais (`tests/fixtures/`).
+
+## Licença
+
+[MIT](LICENSE)
