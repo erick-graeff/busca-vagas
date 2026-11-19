@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Dados pessoais e estado local (nunca versionar)
+config.toml
+data/
+vagas_filtradas.json
+curriculo/
+curriculo_experiencia.md
+HANDOFF.md

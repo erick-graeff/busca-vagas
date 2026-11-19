@@ -1,0 +1,138 @@
+# Regras usadas nos testes de caracterização (as mesmas do protótipo original).
+
+data_dir = "data"
+
+[filter]
+title_bonus = 2
+title_include = ["developer", "desenvolvedor", "desenvolvedora", "desenvolvedores", "engineer",
+                 "software", "backend", "back end", "fullstack", "full stack", "programmer"]
+title_exclude = ["sales", "vendas", "client director", "hr", "human resources", "recruiter",
+                 "recruiting", "recruitment", "business partner", "vice president",
+                 "product manager", "project manager", "delivery manager", "designer",
+                 "business analyst", "marketing", "presales", "adoption lead", "account",
+                 "devops", "devsecops", "sre", "qa", "quality", "observability", "cybersecurity",
+                 "visualization", "architect", "manager", "data", "databricks"]
+stack_exclude = ["java", ".net", "c#", "angular", "kotlin", "android", "ios", "golang", "go",
+                 "oracle", "dynamics", "aem", "adobe", "salesforce marketing", "sap", "boomi",
+                 "huawei"]
+
+[filter.mention_bonus]
+points = 3
+cap = 5
+
+[[filter.required]]
+name = "Python"
+terms = ["python"]
+weight = 10
+
+[[filter.keywords]]
+name = "AWS"
+terms = ["aws", "amazon web services"]
+weight = 5
+
+[[filter.keywords]]
+name = "FastAPI"
+terms = ["fastapi"]
+weight = 5
+
+[[filter.keywords]]
+name = "Lambda"
+terms = ["aws lambda", "lambda"]
+weight = 3
+
+[[filter.keywords]]
+name = "DynamoDB"
+terms = ["dynamodb"]
+weight = 3
+
+[[filter.keywords]]
+name = "API Gateway"
+terms = ["api gateway"]
+weight = 2
+
+[[filter.keywords]]
+name = "S3"
+terms = ["s3"]
+weight = 1
+
+[[filter.keywords]]
+name = "CloudWatch"
+terms = ["cloudwatch"]
+weight = 1
+
+[[filter.keywords]]
+name = "Serverless"
+terms = ["serverless"]
+weight = 2
+
+[[filter.keywords]]
+name = "Microservices"
+terms = ["microservices", "microsserviços", "microservicos"]
+weight = 2
+
+[[filter.keywords]]
+name = "SQL"
+terms = ["sql"]
+weight = 3
+
+[[filter.keywords]]
+name = "PostgreSQL"
+terms = ["postgresql", "postgres"]
+weight = 2
+
+[[filter.keywords]]
+name = "Docker"
+terms = ["docker"]
+weight = 2
+
+[[filter.keywords]]
+name = "Terraform"
+terms = ["terraform"]
+weight = 2
+
+[[filter.keywords]]
+name = "GCP"
+terms = ["gcp", "google cloud", "vertex ai", "bigquery"]
+weight = 2
+
+[[filter.keywords]]
+name = "Salesforce"
+terms = ["salesforce", "apex"]
+weight = 2
+
+[[filter.keywords]]
+name = "REST"
+terms = ["rest", "restful", "rest api"]
+weight = 1
+
+[[filter.keywords]]
+name = "Git/CI-CD"
+terms = ["gitlab", "ci/cd", "cicd"]
+weight = 1
+
+[[filter.keywords]]
+name = "pytest"
+terms = ["pytest", "tdd"]
+weight = 1
+
+[[filter.keywords]]
+name = "JavaScript"
+terms = ["javascript"]
+weight = 1
+
+[[filter.keywords]]
+name = "Laravel"
+terms = ["laravel"]
+weight = 1
+
+[profiles.ciandt]
+levels = ["senior"]
+countries = ["BR"]
+remote_only = true
+accept_unspecified_level = true
+
+[[sources]]
+type = "lever"
+company = "ciandt"
+profile = "ciandt"
+
