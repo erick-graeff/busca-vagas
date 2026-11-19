@@ -5,7 +5,7 @@ class KeyValueStore(Protocol):
     """Armazenamento chave-valor persistente, separado por namespace.
 
     Namespaces usados hoje: "sources" (cache das fontes), "match" (cache da IA),
-    "seen" (vagas já vistas). Valores precisam ser serializáveis em JSON.
+    "seen" (vagas já vistas), "alerts" (falhas já avisadas). Valores precisam ser serializáveis em JSON.
     """
 
     def get(self, namespace: str, key: str) -> Any | None: ...

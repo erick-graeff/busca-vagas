@@ -1,13 +1,14 @@
-"""Pipeline de busca: fetch → dedupe → perfil → regras → novas? → match → marcar vistas → report → notify."""
+"""Pipeline de busca: fetch → dedupe → perfil → regras → novas? → match → notify → marcar vistas → report."""
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from busca_vagas.application.ports.inbound import SearchReport, SearchRequest
-from busca_vagas.application.ports.notifier import Notifier
+from busca_vagas.application.ports.inbound import Issue, SearchReport, SearchRequest
+from busca_vagas.application.ports.notifier import Notifier, NotifierError
 from busca_vagas.application.ports.sources import JobSource, SourceError
 from busca_vagas.application.ports.storage import KeyValueStore
+from busca_vagas.application.use_cases.alerts import AlertState
 from busca_vagas.application.use_cases.match_jobs import MatchJobs
 from busca_vagas.domain.filtering import passes_profile, rank, score
 from busca_vagas.domain.models import Posting, ScoredPosting
@@ -49,7 +50,7 @@ class SearchJobsService:
             raise ValueError("match solicitado, mas nenhum matcher foi configurado")
 
         now = self._clock()
-        errors: list[str] = []
+        errors: list[Issue] = []
 
         # [1] fetch e [2] dedupe por Posting.key (a primeira fonte que trouxer a vaga vence)
         candidates: dict[str, tuple[Posting, SearchProfile]] = {}
@@ -58,7 +59,7 @@ class SearchJobsService:
             try:
                 postings = spec.source.fetch()
             except SourceError as e:
-                errors.append(f"{spec.source.name}: {e}")
+                errors.append(Issue(spec.source.name, str(e)))
                 continue
             total += len(postings)
             for p in postings:
@@ -84,12 +85,7 @@ class SearchJobsService:
             for r in results:
                 r.match = self._matcher.match(r.posting)
                 if not r.match.ok:
-                    errors.append(f"match {r.posting.key}: {r.match.error}")
-
-        # [7] marcar vistas (com match ativo, só as avaliadas com sucesso, para retentar as falhas)
-        for r in results:
-            if r.posting.key in new_keys and (r.match is None or r.match.ok):
-                self._store.set(SEEN_NAMESPACE, r.posting.key, {"first_seen": now.isoformat()})
+                    errors.append(Issue(f"match {r.posting.key}", r.match.error))
 
         report = SearchReport(
             generated_at=now,
@@ -99,10 +95,28 @@ class SearchJobsService:
             errors=errors,
         )
 
-        # [8] report e [9] notify
+        # [7] notify (antes de marcar vistas: se a entrega falhar, as vagas voltam no próximo cron)
+        delivered = True
+        if request.notify:
+            alerts = AlertState(self._store)
+            report.new_issues, report.resolved = alerts.diff(errors)  # cada falha é avisada uma vez
+            current_issues = list(errors)
+            for notifier in self._notifiers:
+                try:
+                    notifier.notify(report)
+                except NotifierError as e:
+                    delivered = False
+                    errors.append(Issue(f"notificação {type(notifier).__name__}", str(e)))
+            if delivered:
+                alerts.replace(current_issues, now)
+
+        # [8] marcar vistas (com match ativo, só as avaliadas com sucesso, para retentar as falhas)
+        if delivered:
+            for r in results:
+                if r.posting.key in new_keys and (r.match is None or r.match.ok):
+                    self._store.set(SEEN_NAMESPACE, r.posting.key, {"first_seen": now.isoformat()})
+
+        # [9] report (console, arquivo), já com eventuais erros de notificação
         for reporter in self._reporters:
             reporter.notify(report)
-        if request.notify:
-            for notifier in self._notifiers:
-                notifier.notify(report)
         return report

@@ -46,7 +46,8 @@ class MatchResult:
     """Avaliação de aderência vaga x currículo feita por uma IA."""
 
     score: int | None = None
-    summary: str = ""
+    job_summary: str = ""  # descrição breve da vaga em si
+    summary: str = ""  # avaliação da aderência
     strengths: list[str] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
     raw: str = ""  # resposta original (útil para depurar o prompt)

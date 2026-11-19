@@ -39,6 +39,7 @@ def parse_response(raw: str) -> MatchResult:
         return MatchResult(raw=raw, error="JSON não é um objeto")
     return MatchResult(
         score=data.get("score"),
+        job_summary=data.get("job_summary", ""),
         summary=data.get("summary", ""),
         strengths=data.get("strengths", []),
         gaps=data.get("gaps", []),

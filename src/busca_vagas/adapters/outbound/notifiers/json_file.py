@@ -15,7 +15,7 @@ class JsonFileNotifier:
         payload = {
             "generated_at": report.generated_at.isoformat(),
             "total_fetched": report.total_fetched,
-            "errors": report.errors,
+            "errors": [str(e) for e in report.errors],
             "results": [
                 {**asdict(r), "key": r.posting.key, "is_new": r.posting.key in report.new_keys}
                 for r in report.results

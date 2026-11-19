@@ -82,7 +82,7 @@ def test_source_failure_does_not_stop_other_sources(rules):
     ]
     report = service(rules, sources=sources).run(SearchRequest())
     assert len(report.results) == 1
-    assert report.errors == ["fake:down: fora do ar"]
+    assert [str(e) for e in report.errors] == ["fake:down: fora do ar"]
 
 
 def test_dedupe_across_sources(rules):
@@ -98,3 +98,56 @@ def test_notifiers_only_with_notify_reporters_always(rules):
     assert len(reporter.reports) == 1 and notifier.reports == []
     svc.run(SearchRequest(notify=True))
     assert len(reporter.reports) == 2 and len(notifier.reports) == 1
+
+
+def test_failed_notification_keeps_postings_unseen(rules):
+    from busca_vagas.application.ports.notifier import NotifierError
+
+    class Failing:
+        def notify(self, report):
+            raise NotifierError("fora do ar")
+
+    store, reporter = InMemoryStore(), FakeNotifier()
+    svc = service(rules, [make_posting()], store=store, notifier=Failing(), reporter=reporter)
+    report = svc.run(SearchRequest(notify=True))
+    assert any("fora do ar" in str(e) for e in report.errors)
+    assert reporter.reports[0].errors == report.errors  # o relatório local mostra a falha
+    assert report.new_keys and not store.data.get("seen")  # volta no próximo cron
+    assert svc.run(SearchRequest()).new_keys == report.new_keys
+
+
+def test_issue_alerted_once_until_resolved(rules):
+    down = FakeSource([], fail=True, name="fake:down")
+    up = FakeSource([make_posting()], name="fake:up")
+    store, notifier = InMemoryStore(), FakeNotifier()
+
+    def run(sources):
+        svc = service(rules, store=store, notifier=notifier, sources=[SourceSpec(s, PROFILE) for s in sources])
+        return svc.run(SearchRequest(notify=True))
+
+    first = run([down, up])
+    assert [i.subject for i in first.new_issues] == ["fake:down"]
+    second = run([down, up])
+    assert second.errors and second.new_issues == [] and second.resolved == []  # não repete
+    third = run([up])
+    assert third.new_issues == [] and third.resolved == ["fake:down"]  # avisa que voltou
+    assert run([up]).resolved == []
+
+
+def test_alert_failure_dedupes_and_needs_delivery():
+    from busca_vagas.application.ports.inbound import Issue
+    from busca_vagas.application.ports.notifier import NotifierError
+    from busca_vagas.application.use_cases.alerts import AlertFailure, AlertState
+
+    class Failing:
+        def notify(self, report):
+            raise NotifierError("x")
+
+    store = InMemoryStore()
+    issue = Issue("configuração", "TOML inválido")
+    assert AlertFailure([Failing()], store).alert(issue) is False  # não entregou: tenta de novo depois
+    notifier = FakeNotifier()
+    alert = AlertFailure([notifier], store)
+    assert alert.alert(issue) is True and alert.alert(issue) is False
+    assert notifier.reports[0].issues_to_alert == [issue] and notifier.reports[0].results == []
+    assert AlertState(store).diff([]) == ([], ["configuração"])  # a próxima busca boa avisa que resolveu

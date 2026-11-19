@@ -42,3 +42,22 @@ def test_match_requires_resume(tmp_path):
     config.match.resume = tmp_path / "nao_existe.md"
     with pytest.raises(ConfigError, match="currículo não encontrado"):
         build_search(config, match=True)
+
+
+def test_telegram_credentials_only_required_with_notify(tmp_path, monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    cfg = tmp_path / "c.toml"
+    cfg.write_text(
+        '[filter]\n[[filter.required]]\nname="P"\nterms=["python"]\n'
+        "[profiles.a]\n"
+        '[[sources]]\ntype="lever"\ncompany="x"\nprofile="a"\n'
+        '[[notifiers]]\ntype="telegram"\n'
+    )
+    config = load_config(cfg)
+    build_search(config)  # sem --notify, não exige credenciais
+    with pytest.raises(ConfigError, match="token e chat_id"):
+        build_search(config, notify=True)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "t")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "1")
+    build_search(config, notify=True)

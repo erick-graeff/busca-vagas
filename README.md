@@ -2,7 +2,7 @@
 
 Busca vagas em fontes configuráveis, aplica um **filtro determinístico** por palavras-chave e,
 opcionalmente, pede a uma IA (via [opencode](https://opencode.ai)) uma avaliação de aderência entre
-cada vaga e o seu currículo. Pensado para rodar no cron e avisar só das vagas novas.
+cada vaga e o seu currículo. Pensado para rodar no cron e avisar só das vagas novas, inclusive pelo Telegram.
 
 Fontes suportadas hoje: **Lever** (qualquer empresa em `jobs.lever.co/<empresa>`).
 
@@ -34,20 +34,82 @@ uv run busca-vagas run --match --model opencode/big-pickle
 | `--new-only` | Mostra só vagas que ainda não apareceram em execuções anteriores.             |
 | `--match`    | Avalia as vagas filtradas com IA (resultado em cache).                       |
 | `--model`    | Sobrescreve o modelo de `[match]` (`opencode models` lista os disponíveis).  |
-| `--notify`   | Aciona os notificadores extras de `[[notifiers]]` (ex.: Telegram).           |
+| `--notify`   | Aciona os notificadores de `[[notifiers]]` (ex.: [Telegram](#telegram)).     |
 
 Códigos de saída: `0` ok · `1` erro de configuração · `2` executou com falhas parciais
-(fonte fora do ar, erro da IA), com avisos no stderr.
+(fonte fora do ar, erro da IA, notificação não entregue), com avisos no stderr · `3` erro
+inesperado (bug), com o traceback no stderr.
 
 ### Cron
 
 ```cron
-0 8,13,18 * * 1-5  /caminho/busca-vagas/.venv/bin/busca-vagas run --config /caminho/busca-vagas/config.toml --refresh --new-only --match --notify >> /caminho/busca-vagas/data/cron.log 2>&1
+PATH=/caminho/do/opencode/bin:/usr/local/bin:/usr/bin:/bin
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=123456789
+*/30 * * * *  /caminho/busca-vagas/.venv/bin/busca-vagas run --config /caminho/busca-vagas/config.toml --refresh --new-only --match --notify >> /caminho/busca-vagas/data/cron.log 2>&1
 ```
 
 Caminhos relativos da config são resolvidos a partir da pasta do arquivo, então o cron funciona
-de qualquer diretório. Uma vaga só é marcada como vista depois de avaliada com sucesso. Se a IA
-falhar, ela volta na próxima execução.
+de qualquer diretório. Uma vaga só é marcada como vista depois de avaliada com sucesso e
+notificada. Se a IA ou a notificação falhar, ela volta na próxima execução.
+
+O cron não lê o `.bashrc`: defina no crontab o `PATH` (para achar o `opencode`) e as variáveis
+do Telegram.
+
+#### Acompanhando falhas
+
+Cada execução fica delimitada no log, com horário e resultado:
+
+```
+=== 2026-11-19 14:30:02 · busca-vagas run ===
+...
+=== fim · exit=0 · 3 selecionadas, 1 novas, 0 avisos · 32.8s ===
+```
+
+```bash
+grep -nE "AVISO|erro|Traceback|exit=[123]" data/cron.log   # só os problemas
+```
+
+Com `--notify`, as falhas também chegam no Telegram, **uma vez cada**: o mesmo problema não é
+avisado de novo a cada execução, e chega um "✅ voltou a funcionar" quando ele some. Isso vale
+para falhas parciais (fonte, IA) e para erros graves (config inválida, bug). Se a própria
+config estiver quebrada, o alerta só sai com o token e o chat_id em variáveis de ambiente.
+
+### Telegram
+
+As vagas chegam por um **bot** no seu chat privado com ele.
+
+1. No Telegram, fale com o [@BotFather](https://t.me/BotFather), envie `/newbot` e guarde o
+   **token** que ele devolve.
+2. Abra o chat com o seu bot e mande qualquer mensagem (o bot só pode escrever para quem já
+   falou com ele).
+3. Descubra o **chat_id**: o número em `"chat":{"id":...}` na resposta de
+
+   ```bash
+   curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates"
+   ```
+4. Ative o notificador no `config.toml` e passe as credenciais por variável de ambiente:
+
+   ```toml
+   [[notifiers]]
+   type = "telegram"
+   ```
+
+   ```bash
+   export TELEGRAM_BOT_TOKEN=123456:ABC...
+   export TELEGRAM_CHAT_ID=123456789
+   uv run busca-vagas run --refresh --new-only --match --notify
+   ```
+
+| Opção            | Padrão | Descrição                                                         |
+| ---------------- | ------ | ----------------------------------------------------------------- |
+| `only_new`       | `true` | Só vagas novas. Com `false`, envia todas as selecionadas.         |
+| `max_results`    | `20`   | Máximo de vagas por execução; o resto fica no relatório local.    |
+| `include_errors` | `true` | Avisa falhas (uma vez cada) e quando elas se resolvem.            |
+| `token`/`chat_id`| env    | Alternativa às variáveis `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. |
+
+Sem vagas novas e sem avisos, nada é enviado. Para testar com vagas que você já viu, rode uma
+vez com `only_new = false`.
 
 ## Configuração
 
@@ -114,8 +176,8 @@ canal de notificação: só as **portas** (interfaces) que eles implementam.
  │ setup   │    │ use_cases/match_jobs.py ───────────────────▶ LLMClient  ◀── OpencodeCLI
  │ (futuro)│    │        │                                │
  └─────────┘    │        ▼                         ──────────▶ KeyValueStore ◀── JsonStore
-                │ domain/ (puro): Posting, regras,  ──────────▶ Notifier   ◀── Console, JsonFile
-                │ filtro, níveis                          │                    (Telegram: futuro)
+                │ domain/ (puro): Posting, regras,  ──────────▶ Notifier   ◀── Console, JsonFile,
+                │ filtro, níveis                          │                    Telegram
                 └─────────────────────────────────────────┘
  config.toml ─▶ config/loader ─▶ bootstrap.py (único que conhece os adapters concretos)
 ```
@@ -132,9 +194,9 @@ As dependências apontam sempre para dentro: `adapters → application → domai
  [4] regras         título · stacks · palavra obrigatória · pontuação
  [5] novas?         --new-only: descarta as já vistas
  [6] match IA       --match: prompt + currículo → LLMClient → JSON (com cache)
- [7] marcar vistas  com match ativo, só as avaliadas com sucesso
- [8] report         console + arquivo JSON (sempre)
- [9] notify         --notify: notificadores extras
+ [7] notify         --notify: notificadores de [[notifiers]] (vagas novas + falhas ainda não avisadas)
+ [8] marcar vistas  só as avaliadas com sucesso e entregues
+ [9] report         console + arquivo JSON (sempre), já com os avisos
 ```
 
 ### Estrutura
@@ -161,7 +223,7 @@ Cada extensão é um módulo novo, mais uma linha no registro do pacote correspo
 | ---------------------------- | ------------------------------------ | ---------------------------------------- |
 | Fonte (Greenhouse, Ashby...) | `JobSource` (`name`, `fetch()`)      | `adapters/outbound/sources/__init__.py`  |
 | IA (Claude, Ollama...)       | `LLMClient` (`model_id`, `complete`) | `adapters/outbound/llm/__init__.py`      |
-| Notificação (Telegram...)    | `Notifier` (`notify(report)`)        | `adapters/outbound/notifiers/__init__.py`|
+| Notificação (e-mail...)      | `Notifier` (`notify(report)`)        | `adapters/outbound/notifiers/__init__.py`|
 
 Cada classe recebe as opções do seu bloco na config via `from_options(dict)`. Por exemplo,
 `[[sources]] type = "greenhouse"` com `board = "..."`.
@@ -171,6 +233,8 @@ Cada classe recebe as opções do seu bloco na config via `from_options(dict)`. 
 - O currículo enviado à IA é o arquivo de `[match].resume`. **Remova dele nome, contatos e links.**
   Os modelos gratuitos do opencode rodam num serviço externo.
 - O opencode roda numa pasta temporária, então o agente não enxerga os arquivos do projeto.
+- O token do bot dá controle total sobre ele: guarde-o em variável de ambiente, não no git. As
+  mensagens de erro nunca mostram o token.
 - `config.toml`, `data/`, `curriculo*` e as saídas ficam fora do git (veja o `.gitignore`).
 
 ## Desenvolvimento

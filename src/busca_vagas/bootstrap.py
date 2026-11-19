@@ -4,6 +4,7 @@ Lê a configuração, instancia os adapters e injeta tudo nos casos de uso.
 """
 
 from importlib import resources
+from pathlib import Path
 
 from busca_vagas.adapters.outbound.llm import LLM_BACKENDS
 from busca_vagas.adapters.outbound.notifiers import NOTIFIER_TYPES
@@ -13,6 +14,7 @@ from busca_vagas.adapters.outbound.sources import SOURCE_TYPES
 from busca_vagas.adapters.outbound.sources.cached import CachedSource
 from busca_vagas.adapters.outbound.storage.json_store import JsonStore
 from busca_vagas.application.ports.notifier import Notifier
+from busca_vagas.application.use_cases.alerts import AlertFailure
 from busca_vagas.application.use_cases.match_jobs import MatchJobs
 from busca_vagas.application.use_cases.search_jobs import SearchJobsService, SourceSpec
 from busca_vagas.config.loader import ConfigError, to_profile, to_rules
@@ -45,7 +47,12 @@ def _build_matcher(cfg: MatchConfig | None, store: JsonStore, model: str | None)
 
 
 def build_search(
-    config: AppConfig, *, refresh: bool = False, match: bool = False, model: str | None = None
+    config: AppConfig,
+    *,
+    refresh: bool = False,
+    match: bool = False,
+    model: str | None = None,
+    notify: bool = False,
 ) -> SearchJobsService:
     store = JsonStore(config.data_dir)
 
@@ -66,9 +73,13 @@ def build_search(
     if config.output.json_file:
         reporters.append(JsonFileNotifier(config.output.json_file))
 
-    notifiers = [
-        _registered(NOTIFIER_TYPES, "notificador", n.type)(n.options) for n in config.notifiers
-    ]
+    notifiers: list[Notifier] = []  # só montados com --notify: credenciais não são exigidas sem ele
+    for n in config.notifiers if notify else []:
+        factory = _registered(NOTIFIER_TYPES, "notificador", n.type)
+        try:
+            notifiers.append(factory(n.options))
+        except ValueError as e:
+            raise ConfigError(str(e)) from e
 
     return SearchJobsService(
         sources=sources,
@@ -78,3 +89,25 @@ def build_search(
         notifiers=notifiers,
         matcher=_build_matcher(config.match, store, model) if match else None,
     )
+
+
+def build_failure_alert(config: AppConfig | None, config_path: Path) -> AlertFailure | None:
+    """Alerta de erro grave. Se a config nem carregou, usa o que der para montar só com
+    variáveis de ambiente (ex.: TELEGRAM_BOT_TOKEN) e guarda o estado em <pasta da config>/data."""
+    if config is not None:
+        specs = [(n.type, n.options) for n in config.notifiers]
+        data_dir = config.data_dir
+    else:
+        specs = [(type_, {}) for type_ in NOTIFIER_TYPES]
+        data_dir = Path(config_path).resolve().parent / "data"
+
+    notifiers: list[Notifier] = []
+    for type_, options in specs:
+        factory = NOTIFIER_TYPES.get(type_)
+        if factory is None:
+            continue
+        try:
+            notifiers.append(factory(options))
+        except ValueError:  # faltam credenciais: não dá para usar este
+            continue
+    return AlertFailure(notifiers, JsonStore(data_dir)) if notifiers else None

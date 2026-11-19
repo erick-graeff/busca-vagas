@@ -24,6 +24,8 @@ class ConsoleNotifier:
             print(f"      {p.url}", file=out)
             if r.match:
                 if r.match.ok:
+                    if r.match.job_summary:
+                        print(f"      vaga: {r.match.job_summary}", file=out)
                     print(f"      IA: {r.match.score}/100 - {r.match.summary}", file=out)
                 else:
                     print(f"      IA: erro - {r.match.error}", file=out)

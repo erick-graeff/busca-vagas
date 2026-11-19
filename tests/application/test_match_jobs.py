@@ -6,8 +6,10 @@ from tests.conftest import make_posting
 
 
 def test_parse_response_tolerates_fences_and_text():
-    r = parse_response('Claro!\n```json\n{"score": 72, "summary": "bom", "gaps": ["k8s"]}\n```')
-    assert (r.score, r.summary, r.gaps, r.ok) == (72, "bom", ["k8s"], True)
+    r = parse_response(
+        'Claro!\n```json\n{"score": 72, "job_summary": "API em Python", "summary": "bom", "gaps": ["k8s"]}\n```'
+    )
+    assert (r.score, r.job_summary, r.summary, r.gaps, r.ok) == (72, "API em Python", "bom", ["k8s"], True)
 
 
 def test_parse_response_errors():

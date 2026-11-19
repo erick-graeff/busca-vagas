@@ -110,7 +110,15 @@ console = true
 json_file = "vagas_filtradas.json"
 
 # ---------------------------------------------------------------------------
-# Notificadores extras, acionados com --notify (ex.: Telegram, em breve).
+# Notificadores extras, acionados com --notify.
 # ---------------------------------------------------------------------------
+# Telegram: crie um bot com o @BotFather, mande qualquer mensagem para ele e
+# descubra o chat_id (veja o README). Prefira passar as credenciais por
+# variável de ambiente (TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID) a gravá-las aqui.
 # [[notifiers]]
 # type = "telegram"
+# only_new = true          # só vagas novas (false = todas as selecionadas)
+# max_results = 20         # vagas por execução; o restante fica no relatório local
+# include_errors = true    # avisa falhas (uma vez cada) e quando se resolvem
+# token = "123:ABC"        # alternativa a $TELEGRAM_BOT_TOKEN
+# chat_id = "123456789"    # alternativa a $TELEGRAM_CHAT_ID
