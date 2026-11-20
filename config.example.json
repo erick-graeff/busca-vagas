@@ -1,0 +1,85 @@
+{
+  "$schema": "./config.schema.json",
+  "data_dir": "data",
+  "filter": {
+    "title_bonus": 2,
+    "title_include": [
+      "developer", "desenvolvedor", "desenvolvedora", "engineer", "engenheiro", "software",
+      "backend", "back end", "fullstack", "full stack", "programmer"
+    ],
+    "title_exclude": [
+      "sales", "vendas", "recruiter", "designer", "product manager", "project manager",
+      "business analyst", "marketing", "devops", "qa", "manager"
+    ],
+    "stack_exclude": ["java", ".net", "c#", "php"],
+    "mention_bonus": {
+      "points": 3,
+      "cap": 5
+    },
+    "required": [
+      {
+        "name": "Python",
+        "terms": ["python"],
+        "weight": 10
+      }
+    ],
+    "keywords": [
+      {
+        "name": "AWS",
+        "terms": ["aws", "amazon web services"],
+        "weight": 5
+      },
+      {
+        "name": "FastAPI",
+        "terms": ["fastapi"],
+        "weight": 5
+      },
+      {
+        "name": "SQL",
+        "terms": ["sql"],
+        "weight": 3
+      },
+      {
+        "name": "Docker",
+        "terms": ["docker"],
+        "weight": 2
+      }
+    ]
+  },
+  "profiles": {
+    "senior_remoto_br": {
+      "levels": ["senior"],
+      "countries": ["BR"],
+      "remote_only": true,
+      "accept_unspecified_level": true
+    },
+    "pleno_ou_senior": {
+      "levels": ["pleno", "senior"],
+      "remote_only": true
+    }
+  },
+  "sources": [
+    {
+      "type": "lever",
+      "company": "ciandt",
+      "profile": "senior_remoto_br"
+    }
+  ],
+  "match": {
+    "backend": "opencode",
+    "model": "opencode/deepseek-v4.1-flash-free",
+    "timeout": 180,
+    "resume": "curriculo.md"
+  },
+  "output": {
+    "console": true,
+    "json_file": "vagas_filtradas.json"
+  },
+  "notifiers": [
+    {
+      "type": "telegram",
+      "only_new": true,
+      "max_results": 20
+    }
+  ]
+}

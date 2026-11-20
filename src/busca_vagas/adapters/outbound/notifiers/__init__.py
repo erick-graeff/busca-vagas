@@ -2,7 +2,7 @@
 
 Para adicionar um (ex.: e-mail): implemente `busca_vagas.application.ports.Notifier`
 com um `from_options(dict)` e registre aqui. Console e arquivo JSON são sempre
-acionados e configurados em [output].
+acionados e configurados em "output".
 """
 
 from collections.abc import Callable, Mapping

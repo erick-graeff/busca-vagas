@@ -10,7 +10,7 @@ from pathlib import Path
 
 from busca_vagas.application.ports.inbound import Issue, SearchRequest
 
-DEFAULT_CONFIG = "config.toml"
+DEFAULT_CONFIG = "config.json"
 
 EXIT_OK = 0
 EXIT_CONFIG_ERROR = 1
@@ -36,13 +36,22 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--notify",
         action="store_true",
-        help="aciona os notificadores de [[notifiers]] (vagas novas, falhas e erros graves)",
+        help="aciona os notificadores de 'notifiers' (vagas novas, falhas e erros graves)",
     )
+    sub.add_parser("schema", help="imprime o JSON Schema da configuração (config.schema.json)")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "schema":
+        import json
+
+        from busca_vagas.config.schema import json_schema
+
+        print(json.dumps(json_schema(), indent=2, ensure_ascii=False))
+        return EXIT_OK
+
     # com saída redirecionada (cron), mantém stdout e stderr na ordem certa no log
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -67,7 +76,7 @@ def _run(args: argparse.Namespace) -> tuple[int, str]:
             config, refresh=args.refresh, match=args.match, model=args.model, notify=args.notify
         )
         if args.notify and not config.notifiers:
-            print("aviso: --notify sem nenhum [[notifiers]] na configuração", file=sys.stderr)
+            print("aviso: --notify sem nenhum item em 'notifiers' na configuração", file=sys.stderr)
         report = search.run(SearchRequest(new_only=args.new_only, match=args.match, notify=args.notify))
     except ConfigError as e:
         print(f"erro: {e}", file=sys.stderr)

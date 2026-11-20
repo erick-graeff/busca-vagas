@@ -1,13 +1,17 @@
+import json
+
 from busca_vagas.adapters.inbound import cli
 from busca_vagas.adapters.outbound import notifiers, sources
 from tests.application.fakes import FakeNotifier, FakeSource
 
-GOOD = (
-    '[filter]\n[[filter.required]]\nname="P"\nterms=["python"]\n'
-    "[profiles.a]\n"
-    '[[sources]]\ntype="fake"\nprofile="a"\n'
-    '[output]\nconsole=false\n'
-    '[[notifiers]]\ntype="fake"\n'
+GOOD = json.dumps(
+    {
+        "filter": {"required": [{"name": "P", "terms": ["python"]}]},
+        "profiles": {"a": {}},
+        "sources": [{"type": "fake", "profile": "a"}],
+        "output": {"console": False},
+        "notifiers": [{"type": "fake"}],
+    }
 )
 
 
@@ -20,7 +24,7 @@ def fake_registry(monkeypatch):
 
 def test_run_log_has_timestamped_header_and_footer(tmp_path, capsys, monkeypatch):
     fake_registry(monkeypatch)
-    (cfg := tmp_path / "c.toml").write_text(GOOD)
+    (cfg := tmp_path / "c.json").write_text(GOOD)
     assert cli.main(["run", "--config", str(cfg)]) == cli.EXIT_OK
     out = capsys.readouterr().out.splitlines()
     assert out[0].startswith("=== 20") and "busca-vagas run" in out[0]
@@ -29,7 +33,7 @@ def test_run_log_has_timestamped_header_and_footer(tmp_path, capsys, monkeypatch
 
 def test_config_error_is_alerted_once_with_notify(tmp_path, capsys, monkeypatch):
     sent = fake_registry(monkeypatch)
-    (cfg := tmp_path / "c.toml").write_text("type = telegram\n")  # TOML inválido
+    (cfg := tmp_path / "c.json").write_text('{"type": telegram}')  # JSON inválido
     for _ in range(2):
         assert cli.main(["run", "--config", str(cfg), "--notify"]) == cli.EXIT_CONFIG_ERROR
     assert len(sent.reports) == 1  # avisou uma vez só
@@ -40,7 +44,7 @@ def test_config_error_is_alerted_once_with_notify(tmp_path, capsys, monkeypatch)
 
 def test_unexpected_error_is_alerted_and_resolved(tmp_path, capsys, monkeypatch):
     sent = fake_registry(monkeypatch)
-    (cfg := tmp_path / "c.toml").write_text(GOOD)
+    (cfg := tmp_path / "c.json").write_text(GOOD)
     from busca_vagas.application.use_cases.search_jobs import SearchJobsService
 
     original = SearchJobsService.run
@@ -56,6 +60,6 @@ def test_unexpected_error_is_alerted_and_resolved(tmp_path, capsys, monkeypatch)
 
 def test_no_alert_without_notify(tmp_path, monkeypatch):
     sent = fake_registry(monkeypatch)
-    (cfg := tmp_path / "c.toml").write_text("x = \n")
+    (cfg := tmp_path / "c.json").write_text("{")
     assert cli.main(["run", "--config", str(cfg)]) == cli.EXIT_CONFIG_ERROR
     assert sent.reports == []

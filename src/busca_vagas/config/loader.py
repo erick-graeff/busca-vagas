@@ -1,13 +1,24 @@
-"""Lê o TOML, valida e converte para os tipos do domínio."""
+"""Lê o JSON, valida e converte para os tipos do domínio."""
 
-import tomllib
+import json
 from pathlib import Path
 
 from pydantic import ValidationError
 
-from busca_vagas.config.schema import AppConfig, FilterConfig, LevelsConfig, ProfileConfig
+from busca_vagas.config.schema import (
+    AppConfig,
+    FilterConfig,
+    LevelsConfig,
+    ProfileConfig,
+)
 from busca_vagas.domain.models import Level
-from busca_vagas.domain.rules import FilterRules, Keyword, MentionBonus, SearchProfile, word_pattern
+from busca_vagas.domain.rules import (
+    FilterRules,
+    Keyword,
+    MentionBonus,
+    SearchProfile,
+    word_pattern,
+)
 
 
 class ConfigError(Exception):
@@ -21,9 +32,11 @@ def load_config(path: Path) -> AppConfig:
     if not path.exists():
         raise ConfigError(f"arquivo de configuração não encontrado: {path}")
     try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as e:
-        raise ConfigError(f"{path}: TOML inválido: {e}") from e
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise ConfigError(f"{path}: JSON inválido na linha {e.lineno}, coluna {e.colno}: {e.msg}") from e
+    if not isinstance(data, dict):
+        raise ConfigError(f"{path}: a configuração precisa ser um objeto JSON ({{...}})")
     try:
         config = AppConfig.model_validate(data)
     except ValidationError as e:

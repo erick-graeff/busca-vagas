@@ -1,0 +1,471 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "FilterConfig": {
+      "additionalProperties": false,
+      "description": "Filtro determinístico (sem IA): decide quais vagas passam e a pontuação de cada uma.",
+      "properties": {
+        "required": {
+          "description": "Palavras obrigatórias: a vaga precisa citar ao menos uma.",
+          "items": {
+            "$ref": "#/$defs/KeywordConfig"
+          },
+          "minItems": 1,
+          "title": "Required",
+          "type": "array"
+        },
+        "keywords": {
+          "default": [],
+          "description": "Palavras que só somam pontos (ranking).",
+          "items": {
+            "$ref": "#/$defs/KeywordConfig"
+          },
+          "title": "Keywords",
+          "type": "array"
+        },
+        "title_include": {
+          "default": [],
+          "description": "O título precisa citar ao menos um destes. Vazio = aceita qualquer título.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Title Include",
+          "type": "array"
+        },
+        "title_exclude": {
+          "default": [],
+          "description": "Títulos com qualquer um destes são descartados.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Title Exclude",
+          "type": "array"
+        },
+        "stack_exclude": {
+          "default": [],
+          "description": "Stacks indesejadas, procuradas só no título. Ignorado se o título citar uma palavra obrigatória (ex.: 'Python/Golang' continua valendo).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Stack Exclude",
+          "type": "array"
+        },
+        "title_bonus": {
+          "default": 2,
+          "description": "Multiplicador do peso quando o termo aparece no título.",
+          "title": "Title Bonus",
+          "type": "integer"
+        },
+        "mention_bonus": {
+          "$ref": "#/$defs/MentionBonusConfig",
+          "default": {
+            "points": 3,
+            "cap": 5
+          }
+        }
+      },
+      "required": [
+        "required"
+      ],
+      "title": "FilterConfig",
+      "type": "object"
+    },
+    "KeywordConfig": {
+      "additionalProperties": false,
+      "description": "Palavra-chave: um nome e os termos que a representam.",
+      "properties": {
+        "name": {
+          "description": "Nome exibido no resultado, ex.: 'Python'.",
+          "title": "Name",
+          "type": "string"
+        },
+        "terms": {
+          "description": "Termos que contam como menção. Palavras/expressões inteiras, sem diferenciar maiúsculas: 'sql' não casa em 'NoSQL', 'java' não casa em 'JavaScript'.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Terms",
+          "type": "array"
+        },
+        "weight": {
+          "default": 1,
+          "description": "Pontos quando algum termo aparece na vaga.",
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "terms"
+      ],
+      "title": "KeywordConfig",
+      "type": "object"
+    },
+    "Level": {
+      "enum": [
+        "junior",
+        "pleno",
+        "senior",
+        "master"
+      ],
+      "title": "Level",
+      "type": "string"
+    },
+    "LevelsConfig": {
+      "additionalProperties": false,
+      "description": "Termos que indicam cada nível de senioridade no título. Os padrões cobrem pt/en.",
+      "properties": {
+        "junior": {
+          "default": [
+            "junior",
+            "júnior",
+            "jr",
+            "entry",
+            "intern",
+            "estagiário",
+            "estagiária",
+            "estagiario",
+            "estagiaria",
+            "estágio",
+            "estagio"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Junior",
+          "type": "array"
+        },
+        "pleno": {
+          "default": [
+            "pleno",
+            "pl",
+            "mid",
+            "mid-level",
+            "middle",
+            "intermediário",
+            "intermediario",
+            "intermediate"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Pleno",
+          "type": "array"
+        },
+        "senior": {
+          "default": [
+            "senior",
+            "sênior",
+            "sr",
+            "snr"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Senior",
+          "type": "array"
+        },
+        "master": {
+          "default": [
+            "master",
+            "lead",
+            "specialist",
+            "principal",
+            "staff"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Master",
+          "type": "array"
+        }
+      },
+      "title": "LevelsConfig",
+      "type": "object"
+    },
+    "MatchConfig": {
+      "additionalProperties": true,
+      "description": "Avaliação de aderência vaga x currículo com IA (usada com --match). Os demais campos\ndependem do `backend`.\n\nopencode: `model` (padrão 'opencode/deepseek-v4.1-flash-free'; `opencode models` lista os\ndisponíveis), `timeout` (s, padrão 180), `binary` (padrão 'opencode').",
+      "properties": {
+        "backend": {
+          "default": "opencode",
+          "description": "Backend de IA. Disponíveis: 'opencode'.",
+          "title": "Backend",
+          "type": "string"
+        },
+        "resume": {
+          "description": "Currículo em texto/markdown SEM dados pessoais (nome, contato, links): ele é enviado para a IA.",
+          "format": "path",
+          "title": "Resume",
+          "type": "string"
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Prompt próprio. Vazio = prompt padrão do pacote.",
+          "title": "Prompt"
+        }
+      },
+      "required": [
+        "resume"
+      ],
+      "title": "MatchConfig",
+      "type": "object"
+    },
+    "MentionBonusConfig": {
+      "additionalProperties": false,
+      "description": "Pontos extras por menção adicional de uma palavra obrigatória.",
+      "properties": {
+        "points": {
+          "default": 3,
+          "description": "Pontos por menção extra.",
+          "title": "Points",
+          "type": "integer"
+        },
+        "cap": {
+          "default": 5,
+          "description": "Máximo de menções extras que pontuam.",
+          "title": "Cap",
+          "type": "integer"
+        }
+      },
+      "title": "MentionBonusConfig",
+      "type": "object"
+    },
+    "NotifierConfig": {
+      "additionalProperties": true,
+      "description": "Notificador extra, acionado com --notify. Os demais campos dependem do `type`.\n\ntelegram: `token` e `chat_id` (ou $TELEGRAM_BOT_TOKEN e $TELEGRAM_CHAT_ID, preferível),\n`only_new` (padrão true), `max_results` (padrão 20), `include_errors` (padrão true).",
+      "properties": {
+        "type": {
+          "description": "Tipo do notificador. Disponíveis: 'telegram'.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "NotifierConfig",
+      "type": "object"
+    },
+    "OutputConfig": {
+      "additionalProperties": false,
+      "description": "Saídas sempre acionadas.",
+      "properties": {
+        "console": {
+          "default": true,
+          "description": "Lista as vagas no terminal.",
+          "title": "Console",
+          "type": "boolean"
+        },
+        "json_file": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "vagas_filtradas.json",
+          "description": "Relatório completo da última execução. null = desliga.",
+          "title": "Json File"
+        }
+      },
+      "title": "OutputConfig",
+      "type": "object"
+    },
+    "ProfileConfig": {
+      "additionalProperties": false,
+      "description": "Perfil de busca, reutilizável entre fontes (ex.: só sênior numa empresa, pleno em outra).",
+      "properties": {
+        "levels": {
+          "default": [
+            "senior"
+          ],
+          "description": "Níveis aceitos.",
+          "items": {
+            "$ref": "#/$defs/Level"
+          },
+          "title": "Levels",
+          "type": "array"
+        },
+        "countries": {
+          "default": [],
+          "description": "Códigos de país aceitos, ex.: ['BR']. Vazio = qualquer.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Countries",
+          "type": "array"
+        },
+        "remote_only": {
+          "default": false,
+          "description": "Descarta vagas híbridas ou presenciais.",
+          "title": "Remote Only",
+          "type": "boolean"
+        },
+        "accept_unspecified_level": {
+          "default": true,
+          "description": "Aceita vagas cujo título não indica senioridade.",
+          "title": "Accept Unspecified Level",
+          "type": "boolean"
+        }
+      },
+      "title": "ProfileConfig",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "additionalProperties": true,
+      "description": "Fonte de vagas. Os demais campos dependem do `type`.\n\nlever: `company` (slug de jobs.lever.co/<company>), `timeout` (s, padrão 30).",
+      "properties": {
+        "type": {
+          "description": "Tipo da fonte. Disponíveis: 'lever'.",
+          "title": "Type",
+          "type": "string"
+        },
+        "profile": {
+          "description": "Nome de um perfil definido em `profiles`.",
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "profile"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Configuração do busca-vagas. Caminhos relativos são resolvidos a partir da pasta do arquivo.",
+  "properties": {
+    "$schema": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Caminho do JSON Schema (para editores e agentes).",
+      "title": "$Schema"
+    },
+    "data_dir": {
+      "default": "data",
+      "description": "Onde ficam caches e o registro de vagas vistas.",
+      "format": "path",
+      "title": "Data Dir",
+      "type": "string"
+    },
+    "filter": {
+      "$ref": "#/$defs/FilterConfig"
+    },
+    "levels": {
+      "$ref": "#/$defs/LevelsConfig",
+      "default": {
+        "junior": [
+          "junior",
+          "júnior",
+          "jr",
+          "entry",
+          "intern",
+          "estagiário",
+          "estagiária",
+          "estagiario",
+          "estagiaria",
+          "estágio",
+          "estagio"
+        ],
+        "pleno": [
+          "pleno",
+          "pl",
+          "mid",
+          "mid-level",
+          "middle",
+          "intermediário",
+          "intermediario",
+          "intermediate"
+        ],
+        "senior": [
+          "senior",
+          "sênior",
+          "sr",
+          "snr"
+        ],
+        "master": [
+          "master",
+          "lead",
+          "specialist",
+          "principal",
+          "staff"
+        ]
+      }
+    },
+    "profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ProfileConfig"
+      },
+      "description": "Perfis de busca, por nome.",
+      "minProperties": 1,
+      "title": "Profiles",
+      "type": "object"
+    },
+    "sources": {
+      "description": "Fontes de vagas.",
+      "items": {
+        "$ref": "#/$defs/SourceConfig"
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "match": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MatchConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "output": {
+      "$ref": "#/$defs/OutputConfig",
+      "default": {
+        "console": true,
+        "json_file": "vagas_filtradas.json"
+      }
+    },
+    "notifiers": {
+      "default": [],
+      "description": "Notificadores acionados com --notify.",
+      "items": {
+        "$ref": "#/$defs/NotifierConfig"
+      },
+      "title": "Notifiers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "filter",
+    "profiles",
+    "sources"
+  ],
+  "title": "busca-vagas",
+  "type": "object"
+}

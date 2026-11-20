@@ -13,7 +13,7 @@ o [opencode](https://opencode.ai) no `PATH`.
 
 ```bash
 uv sync
-cp config.example.toml config.toml        # ajuste ao seu perfil
+cp config.example.json config.json        # ajuste ao seu perfil
 cp examples/curriculo.example.md curriculo.md   # só se for usar --match
 ```
 
@@ -29,12 +29,12 @@ uv run busca-vagas run --match --model opencode/big-pickle
 
 | Flag         | Descrição                                                                    |
 | ------------ | ---------------------------------------------------------------------------- |
-| `--config`   | Arquivo de config (padrão: `$BUSCA_VAGAS_CONFIG` ou `./config.toml`).         |
+| `--config`   | Arquivo de config (padrão: `$BUSCA_VAGAS_CONFIG` ou `./config.json`).         |
 | `--refresh`  | Ignora o cache e consulta as fontes. Sem cache, a fonte é consultada sempre. |
 | `--new-only` | Mostra só vagas que ainda não apareceram em execuções anteriores.             |
 | `--match`    | Avalia as vagas filtradas com IA (resultado em cache).                       |
-| `--model`    | Sobrescreve o modelo de `[match]` (`opencode models` lista os disponíveis).  |
-| `--notify`   | Aciona os notificadores de `[[notifiers]]` (ex.: [Telegram](#telegram)).     |
+| `--model`    | Sobrescreve o modelo de `match` (`opencode models` lista os disponíveis).    |
+| `--notify`   | Aciona os notificadores de `notifiers` (ex.: [Telegram](#telegram)).         |
 
 Códigos de saída: `0` ok · `1` erro de configuração · `2` executou com falhas parciais
 (fonte fora do ar, erro da IA, notificação não entregue), com avisos no stderr · `3` erro
@@ -46,7 +46,7 @@ inesperado (bug), com o traceback no stderr.
 PATH=/caminho/do/opencode/bin:/usr/local/bin:/usr/bin:/bin
 TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_CHAT_ID=123456789
-*/30 * * * *  /caminho/busca-vagas/.venv/bin/busca-vagas run --config /caminho/busca-vagas/config.toml --refresh --new-only --match --notify >> /caminho/busca-vagas/data/cron.log 2>&1
+*/30 * * * *  /caminho/busca-vagas/.venv/bin/busca-vagas run --config /caminho/busca-vagas/config.json --refresh --new-only --match --notify >> /caminho/busca-vagas/data/cron.log 2>&1
 ```
 
 Caminhos relativos da config são resolvidos a partir da pasta do arquivo, então o cron funciona
@@ -88,11 +88,10 @@ As vagas chegam por um **bot** no seu chat privado com ele.
    ```bash
    curl -s "https://api.telegram.org/bot<TOKEN>/getUpdates"
    ```
-4. Ative o notificador no `config.toml` e passe as credenciais por variável de ambiente:
+4. Ative o notificador no `config.json` e passe as credenciais por variável de ambiente:
 
-   ```toml
-   [[notifiers]]
-   type = "telegram"
+   ```json
+   "notifiers": [{"type": "telegram"}]
    ```
 
    ```bash
@@ -109,45 +108,49 @@ As vagas chegam por um **bot** no seu chat privado com ele.
 | `token`/`chat_id`| env    | Alternativa às variáveis `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. |
 
 Sem vagas novas e sem avisos, nada é enviado. Para testar com vagas que você já viu, rode uma
-vez com `only_new = false`.
+vez com `"only_new": false`.
 
 ## Configuração
 
-Tudo fica no `config.toml`. O [`config.example.toml`](config.example.toml) é comentado; o resumo:
+Tudo fica no `config.json`. O [`config.example.json`](config.example.json) é um ponto de
+partida completo, e o [`config.schema.json`](config.schema.json) documenta e valida cada campo:
 
-```toml
-data_dir = "data"                    # caches e vagas vistas
+- **Editores** (VS Code e afins) leem o `"$schema"` do início do arquivo e passam a autocompletar,
+  mostrar a descrição de cada campo ao passar o mouse e marcar erros enquanto você digita.
+- **Agentes de IA** podem receber o schema e o seu currículo e gerar uma config válida.
+- `uv run busca-vagas schema` imprime o schema atualizado.
 
-[filter]
-title_include = ["developer", "engineer", "software"]   # o título precisa citar um
-title_exclude = ["devops", "qa", "manager"]             # descarta o título
-stack_exclude = ["java", ".net"]     # descarta, a menos que o título cite uma obrigatória
-
-[[filter.required]]                  # a vaga precisa citar ao menos uma
-name = "Python"
-terms = ["python"]
-weight = 10
-
-[[filter.keywords]]                  # só pontuam
-name = "AWS"
-terms = ["aws", "amazon web services"]
-weight = 5
-
-[profiles.senior_remoto_br]          # perfis reutilizáveis entre fontes
-levels = ["senior"]                  # junior | pleno | senior | master
-countries = ["BR"]
-remote_only = true
-
-[[sources]]
-type = "lever"
-company = "ciandt"
-profile = "senior_remoto_br"
-
-[match]
-backend = "opencode"
-model = "opencode/deepseek-v4.1-flash-free"
-resume = "curriculo.md"
+```json
+{
+  "$schema": "./config.schema.json",
+  "data_dir": "data",
+  "filter": {
+    "title_include": ["developer", "engineer", "software"],
+    "title_exclude": ["devops", "qa", "manager"],
+    "stack_exclude": ["java", ".net"],
+    "required": [{"name": "Python", "terms": ["python"], "weight": 10}],
+    "keywords": [{"name": "AWS", "terms": ["aws", "amazon web services"], "weight": 5}]
+  },
+  "profiles": {
+    "senior_remoto_br": {"levels": ["senior"], "countries": ["BR"], "remote_only": true}
+  },
+  "sources": [{"type": "lever", "company": "ciandt", "profile": "senior_remoto_br"}],
+  "match": {"backend": "opencode", "model": "opencode/deepseek-v4.1-flash-free", "resume": "curriculo.md"},
+  "notifiers": [{"type": "telegram"}]
+}
 ```
+
+| Campo                  | O que faz                                                                  |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `filter.title_include` | O título precisa citar ao menos um. Vazio aceita qualquer título.          |
+| `filter.title_exclude` | Descarta a vaga se o título citar algum.                                   |
+| `filter.stack_exclude` | Descarta pela stack no título, a menos que ele cite uma palavra obrigatória. |
+| `filter.required`      | A vaga precisa citar ao menos uma (e elas pontuam).                        |
+| `filter.keywords`      | Só pontuam.                                                                |
+| `profiles`             | Perfis por nome: `levels` (`junior`, `pleno`, `senior`, `master`), `countries`, `remote_only`. |
+| `sources`              | Fontes; `type` escolhe o adapter e os demais campos são dele.               |
+| `match`                | IA do `--match`; `resume` é o currículo **sem dados pessoais**.             |
+| `notifiers`            | Acionados com `--notify`.                                                  |
 
 Os termos são palavras inteiras, sem diferenciar maiúsculas: `sql` não casa em "NoSQL", `java`
 não casa em "JavaScript".
@@ -179,7 +182,7 @@ canal de notificação: só as **portas** (interfaces) que eles implementam.
                 │ domain/ (puro): Posting, regras,  ──────────▶ Notifier   ◀── Console, JsonFile,
                 │ filtro, níveis                          │                    Telegram
                 └─────────────────────────────────────────┘
- config.toml ─▶ config/loader ─▶ bootstrap.py (único que conhece os adapters concretos)
+ config.json ─▶ config/loader ─▶ bootstrap.py (único que conhece os adapters concretos)
 ```
 
 As dependências apontam sempre para dentro: `adapters → application → domain`. O teste
@@ -194,7 +197,7 @@ As dependências apontam sempre para dentro: `adapters → application → domai
  [4] regras         título · stacks · palavra obrigatória · pontuação
  [5] novas?         --new-only: descarta as já vistas
  [6] match IA       --match: prompt + currículo → LLMClient → JSON (com cache)
- [7] notify         --notify: notificadores de [[notifiers]] (vagas novas + falhas ainda não avisadas)
+ [7] notify         --notify: notificadores de `notifiers` (vagas novas + falhas ainda não avisadas)
  [8] marcar vistas  só as avaliadas com sucesso e entregues
  [9] report         console + arquivo JSON (sempre), já com os avisos
 ```
@@ -210,7 +213,7 @@ src/busca_vagas/
 ├── adapters/
 │   ├── inbound/cli.py
 │   └── outbound/            # sources/, llm/, storage/, notifiers/ (cada um com registro)
-├── config/                  # schema (pydantic) e loader (TOML → domínio)
+├── config/                  # schema (pydantic → config.schema.json) e loader (JSON → domínio)
 ├── bootstrap.py             # composition root
 └── prompts/match.md         # prompt padrão do match
 ```
@@ -226,16 +229,18 @@ Cada extensão é um módulo novo, mais uma linha no registro do pacote correspo
 | Notificação (e-mail...)      | `Notifier` (`notify(report)`)        | `adapters/outbound/notifiers/__init__.py`|
 
 Cada classe recebe as opções do seu bloco na config via `from_options(dict)`. Por exemplo,
-`[[sources]] type = "greenhouse"` com `board = "..."`.
+`{"type": "greenhouse", "board": "..."}` em `sources`. Documente as opções novas na descrição
+do modelo em `config/schema.py` e regenere o schema (`uv run busca-vagas schema > config.schema.json`;
+um teste avisa se ele ficar desatualizado).
 
 ## Privacidade
 
-- O currículo enviado à IA é o arquivo de `[match].resume`. **Remova dele nome, contatos e links.**
+- O currículo enviado à IA é o arquivo de `match.resume`. **Remova dele nome, contatos e links.**
   Os modelos gratuitos do opencode rodam num serviço externo.
 - O opencode roda numa pasta temporária, então o agente não enxerga os arquivos do projeto.
 - O token do bot dá controle total sobre ele: guarde-o em variável de ambiente, não no git. As
   mensagens de erro nunca mostram o token.
-- `config.toml`, `data/`, `curriculo*` e as saídas ficam fora do git (veja o `.gitignore`).
+- `config.json`, `data/`, `curriculo*` e as saídas ficam fora do git (veja o `.gitignore`).
 
 ## Desenvolvimento
 

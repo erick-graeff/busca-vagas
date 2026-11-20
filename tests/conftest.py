@@ -29,7 +29,7 @@ def isolate_from_outside(monkeypatch):
 
 @pytest.fixture(scope="session")
 def test_config():
-    return load_config(FIXTURES / "config_test.toml")
+    return load_config(FIXTURES / "config_test.json")
 
 
 @pytest.fixture(scope="session")

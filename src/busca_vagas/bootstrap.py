@@ -30,7 +30,7 @@ def _registered(registry: dict, kind: str, type_: str):
 
 def _build_matcher(cfg: MatchConfig | None, store: JsonStore, model: str | None) -> MatchJobs:
     if cfg is None:
-        raise ConfigError("--match exige a seção [match] na configuração")
+        raise ConfigError("--match exige a seção 'match' na configuração")
     if not cfg.resume.exists():
         raise ConfigError(f"currículo não encontrado: {cfg.resume}")
     options = cfg.options

@@ -144,7 +144,7 @@ def test_alert_failure_dedupes_and_needs_delivery():
             raise NotifierError("x")
 
     store = InMemoryStore()
-    issue = Issue("configuração", "TOML inválido")
+    issue = Issue("configuração", "JSON inválido")
     assert AlertFailure([Failing()], store).alert(issue) is False  # não entregou: tenta de novo depois
     notifier = FakeNotifier()
     alert = AlertFailure([notifier], store)
