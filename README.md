@@ -246,6 +246,7 @@ um teste avisa se ele ficar desatualizado).
 
 ```bash
 uv run pytest
+uv run ruff check . && uv run ruff format .
 ```
 
 Os testes de `application/` usam fakes das portas, sem rede e sem IA. Os de `domain/` incluem

@@ -49,7 +49,8 @@ class TelegramNotifier:
         chat_id = options.get("chat_id") or os.environ.get(CHAT_ID_ENV)
         if not token or not chat_id:
             raise ValueError(
-                f"notificador 'telegram' exige token e chat_id (na config ou em ${TOKEN_ENV} e ${CHAT_ID_ENV})"
+                "notificador 'telegram' exige token e chat_id "
+                f"(na config ou em ${TOKEN_ENV} e ${CHAT_ID_ENV})"
             )
         return cls(
             token=str(token),

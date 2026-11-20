@@ -88,7 +88,10 @@ def _run(args: argparse.Namespace) -> tuple[int, str]:
         return EXIT_UNEXPECTED, "erro inesperado"
 
     code = EXIT_PARTIAL if report.errors else EXIT_OK
-    return code, f"{len(report.results)} selecionadas, {len(report.new_results)} novas, {len(report.errors)} avisos"
+    return (
+        code,
+        f"{len(report.results)} selecionadas, {len(report.new_results)} novas, {len(report.errors)} avisos",
+    )
 
 
 def _alert(args: argparse.Namespace, config, issue: Issue) -> None:

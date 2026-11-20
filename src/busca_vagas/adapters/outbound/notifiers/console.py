@@ -12,8 +12,7 @@ class ConsoleNotifier:
         out = self._stream or sys.stdout
         n_new = len(report.new_results)
         print(
-            f"{len(report.results)} vagas selecionadas de {report.total_fetched} buscadas"
-            f" ({n_new} novas)\n",
+            f"{len(report.results)} vagas selecionadas de {report.total_fetched} buscadas ({n_new} novas)\n",
             file=out,
         )
         for r in report.results:

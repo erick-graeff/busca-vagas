@@ -46,7 +46,9 @@ def test_telegram_credentials_only_required_with_notify(tmp_path, monkeypatch):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
     cfg = write(
-        tmp_path, sources=[{"type": "lever", "company": "x", "profile": "a"}], notifiers=[{"type": "telegram"}]
+        tmp_path,
+        sources=[{"type": "lever", "company": "x", "profile": "a"}],
+        notifiers=[{"type": "telegram"}],
     )
     config = load_config(cfg)
     build_search(config)  # sem --notify, não exige credenciais

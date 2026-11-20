@@ -71,10 +71,29 @@ class FilterConfig(_Strict):
 class LevelsConfig(_Strict):
     """Termos que indicam cada nível de senioridade no título. Os padrões cobrem pt/en."""
 
-    junior: list[str] = ["junior", "júnior", "jr", "entry", "intern", "estagiário", "estagiária",
-                         "estagiario", "estagiaria", "estágio", "estagio"]
-    pleno: list[str] = ["pleno", "pl", "mid", "mid-level", "middle", "intermediário",
-                        "intermediario", "intermediate"]
+    junior: list[str] = [
+        "junior",
+        "júnior",
+        "jr",
+        "entry",
+        "intern",
+        "estagiário",
+        "estagiária",
+        "estagiario",
+        "estagiaria",
+        "estágio",
+        "estagio",
+    ]
+    pleno: list[str] = [
+        "pleno",
+        "pl",
+        "mid",
+        "mid-level",
+        "middle",
+        "intermediário",
+        "intermediario",
+        "intermediate",
+    ]
     senior: list[str] = ["senior", "sênior", "sr", "snr"]
     master: list[str] = ["master", "lead", "specialist", "principal", "staff"]
 

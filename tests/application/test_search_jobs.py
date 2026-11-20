@@ -122,7 +122,9 @@ def test_issue_alerted_once_until_resolved(rules):
     store, notifier = InMemoryStore(), FakeNotifier()
 
     def run(sources):
-        svc = service(rules, store=store, notifier=notifier, sources=[SourceSpec(s, PROFILE) for s in sources])
+        svc = service(
+            rules, store=store, notifier=notifier, sources=[SourceSpec(s, PROFILE) for s in sources]
+        )
         return svc.run(SearchRequest(notify=True))
 
     first = run([down, up])

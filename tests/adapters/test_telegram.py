@@ -15,7 +15,10 @@ TOKEN = "123:SEGREDO"
 
 def scored(id_, title="Dev <Python> & AWS", score=30, match=None):
     return ScoredPosting(
-        posting=make_posting(id=id_, title=title), score=score, matched=["Python x2"], title_matched=True,
+        posting=make_posting(id=id_, title=title),
+        score=score,
+        matched=["Python x2"],
+        title_matched=True,
         match=match,
     )
 
@@ -23,8 +26,11 @@ def scored(id_, title="Dev <Python> & AWS", score=30, match=None):
 def report(results, new=None, errors=()):
     keys = {r.posting.key for r in results} if new is None else {r.posting.key for r in new}
     return SearchReport(
-        generated_at=datetime(2026, 11, 19), total_fetched=100, results=results,
-        new_keys=frozenset(keys), errors=list(errors),
+        generated_at=datetime(2026, 11, 19),
+        total_fetched=100,
+        results=results,
+        new_keys=frozenset(keys),
+        errors=list(errors),
     )
 
 
@@ -94,7 +100,9 @@ def test_pack_respects_limit():
 
 def test_notify_posts_html(monkeypatch):
     calls = []
-    monkeypatch.setattr(telegram.requests, "post", lambda url, json, timeout: calls.append((url, json)) or FakeResponse())
+    monkeypatch.setattr(
+        telegram.requests, "post", lambda url, json, timeout: calls.append((url, json)) or FakeResponse()
+    )
     notifier().notify(report([scored("a")]))
     [(url, payload)] = calls
     assert url.endswith(f"/bot{TOKEN}/sendMessage")
@@ -102,7 +110,9 @@ def test_notify_posts_html(monkeypatch):
 
 
 def test_notify_api_error(monkeypatch):
-    monkeypatch.setattr(telegram.requests, "post", lambda *a, **k: FakeResponse(400, {"description": "chat not found"}))
+    monkeypatch.setattr(
+        telegram.requests, "post", lambda *a, **k: FakeResponse(400, {"description": "chat not found"})
+    )
     with pytest.raises(NotifierError, match="400: chat not found"):
         notifier().notify(report([scored("a")]))
 

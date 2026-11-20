@@ -9,10 +9,23 @@ PKG = Path(__file__).parent.parent / "src" / "busca_vagas"
 
 # camada -> prefixos de import proibidos dentro dela
 FORBIDDEN = {
-    "domain": ["busca_vagas.application", "busca_vagas.adapters", "busca_vagas.config",
-               "busca_vagas.bootstrap", "requests", "pydantic", "subprocess"],
-    "application": ["busca_vagas.adapters", "busca_vagas.config", "busca_vagas.bootstrap",
-                    "requests", "pydantic", "subprocess"],
+    "domain": [
+        "busca_vagas.application",
+        "busca_vagas.adapters",
+        "busca_vagas.config",
+        "busca_vagas.bootstrap",
+        "requests",
+        "pydantic",
+        "subprocess",
+    ],
+    "application": [
+        "busca_vagas.adapters",
+        "busca_vagas.config",
+        "busca_vagas.bootstrap",
+        "requests",
+        "pydantic",
+        "subprocess",
+    ],
 }
 
 

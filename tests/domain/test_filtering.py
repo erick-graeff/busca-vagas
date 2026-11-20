@@ -6,7 +6,6 @@ from busca_vagas.domain.models import Level
 from busca_vagas.domain.rules import FilterRules, Keyword, SearchProfile, word_pattern
 from tests.conftest import make_posting
 
-
 # --- caracterização: o comportamento do protótipo original foi preservado ----------------
 
 
@@ -82,3 +81,15 @@ def test_profile_unknown_fields_do_not_reject(rules):
     assert not passes_profile(make_posting(country="CO"), profile, rules)
     assert not passes_profile(make_posting(title="Pleno Python Developer"), profile, rules)
     assert passes_profile(make_posting(title="Python Developer"), profile, rules)  # sem nível
+
+
+def test_posting_key_uses_native_id_or_derives_one():
+    assert make_posting(id="123").key == "fake:acme:123"
+    no_id = make_posting(id="", url="https://example.com/vaga/9")
+    assert (
+        no_id.key.startswith("fake:acme:h-")
+        and no_id.key == make_posting(id="", url="https://example.com/vaga/9").key
+    )
+    assert no_id.key != make_posting(id="", url="https://example.com/vaga/10").key
+    no_url = make_posting(id="", url="", title="Dev Python", location="Remoto")
+    assert no_url.key == make_posting(id="", url="", title="dev python ", location="remoto").key

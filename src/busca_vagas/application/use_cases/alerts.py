@@ -68,7 +68,9 @@ class AlertFailure:
         if issue.subject in self._state.active():
             return False
         now = self._clock()
-        report = SearchReport(generated_at=now, total_fetched=0, results=[], errors=[issue], new_issues=[issue])
+        report = SearchReport(
+            generated_at=now, total_fetched=0, results=[], errors=[issue], new_issues=[issue]
+        )
         delivered = False
         for notifier in self._notifiers:
             try:

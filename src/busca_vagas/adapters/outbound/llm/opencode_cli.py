@@ -37,9 +37,7 @@ class OpencodeCLI:
         # cwd temporário: o agente do opencode não enxerga os arquivos do projeto.
         with tempfile.TemporaryDirectory() as cwd:
             try:
-                proc = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=self.timeout, cwd=cwd
-                )
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout, cwd=cwd)
             except subprocess.TimeoutExpired as e:
                 raise LLMError(f"opencode excedeu {self.timeout}s") from e
         if proc.returncode != 0:

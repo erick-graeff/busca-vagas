@@ -1,5 +1,6 @@
 """Entidades do domínio. Sem I/O e sem dependências externas."""
 
+import hashlib
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -15,15 +16,15 @@ class Level(StrEnum):
 class Posting:
     """Vaga normalizada, independente da fonte de origem.
 
-    Só `source`, `company`, `id`, `title` e `url` são obrigatórios: fontes mais pobres
-    (ex.: resultados de busca) podem não ter descrição, país ou modalidade.
+    Só `source`, `company`, `title` e `url` são obrigatórios: fontes mais pobres
+    (ex.: resultados de busca) podem não ter id, descrição, país ou modalidade.
     """
 
     source: str  # tipo da fonte, ex: "lever"
     company: str
-    id: str  # id nativo da vaga na fonte
     title: str
     url: str
+    id: str = ""  # id nativo da vaga na fonte; vazio = a fonte não informa
     apply_url: str = ""
     country: str = ""
     location: str = ""
@@ -33,8 +34,17 @@ class Posting:
 
     @property
     def key(self) -> str:
-        """Identidade estável da vaga entre execuções (usada para detectar vagas novas)."""
-        return f"{self.source}:{self.company}:{self.id}"
+        """Identidade estável da vaga entre execuções (usada para detectar vagas novas).
+
+        Usa o id da fonte quando existe. Sem ele, deriva um id da URL (ou, sem URL, do título
+        e local), prefixado com "h-" para nunca colidir com um id nativo.
+        """
+        return f"{self.source}:{self.company}:{self.id or self.derived_id}"
+
+    @property
+    def derived_id(self) -> str:
+        basis = self.url.strip() or f"{self.title.strip().lower()}|{self.location.strip().lower()}"
+        return "h-" + hashlib.sha256(basis.encode()).hexdigest()[:16]
 
     @property
     def searchable_text(self) -> str:

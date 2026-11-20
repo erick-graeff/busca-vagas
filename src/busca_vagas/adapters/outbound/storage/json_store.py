@@ -18,9 +18,7 @@ class JsonStore:
     def _load(self, namespace: str) -> dict[str, Any]:
         if namespace not in self._data:
             path = self._file(namespace)
-            self._data[namespace] = (
-                json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-            )
+            self._data[namespace] = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         return self._data[namespace]
 
     def get(self, namespace: str, key: str) -> Any | None:
